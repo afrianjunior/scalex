@@ -1,61 +1,26 @@
-/**************************************************************************
- * 
- * Interfacing ESP8266 NodeMCU with ST7789 TFT display (240x240 pixel).
- * Graphics test example.
- * This is a free software with NO WARRANTY.
- * https://simple-circuit.com/
- *
- *************************************************************************/
-/**************************************************************************
-  This is a library for several Adafruit displays based on ST77* drivers.
-
-  Works with the Adafruit 1.8" TFT Breakout w/SD card
-    ----> http://www.adafruit.com/products/358
-  The 1.8" TFT shield
-    ----> https://www.adafruit.com/product/802
-  The 1.44" TFT breakout
-    ----> https://www.adafruit.com/product/2088
-  as well as Adafruit raw 1.8" TFT display
-    ----> http://www.adafruit.com/products/618
-
-  Check out the links above for our tutorials and wiring diagrams.
-  These displays use SPI to communicate, 4 or 5 pins are required to
-  interface (RST is optional).
-
-  Adafruit invests time and resources providing this open source code,
-  please support Adafruit and open-source hardware by purchasing
-  products from Adafruit!
-
-  Written by Limor Fried/Ladyada for Adafruit Industries.
-  MIT license, all text above must be included in any redistribution
- *************************************************************************/
-
-#include <Adafruit_GFX.h>    // Core graphics library
-#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
+#include <Adafruit_GFX.h>
+#include <Adafruit_ST7789.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <uMQTTBroker.h>
 
-#include "NotoSansBold24pt7b.h"
-#include "NotoSans14pt7b.h"
-#include "NotoSans12pt7b.h"
-#include "NotoSans10pt7b.h"
+#include "fonts/NotoSansBold24pt7b.h"
+#include "fonts/NotoSans14pt7b.h"
+#include "fonts/NotoSans12pt7b.h"
+#include "fonts/NotoSans10pt7b.h"
 #include "icon.h"
 
-// ST7789 TFT module connections
-#define TFT_DC    D1     // TFT DC  pin is connected to NodeMCU pin D1 (GPIO5)
-#define TFT_RST   D2     // TFT RST pin is connected to NodeMCU pin D2 (GPIO4)
-#define TFT_CS    D7     // TFT CS  pin is connected to NodeMCU pin D8 (GPIO15)
+// pin connection
+#define TFT_DC    D1
+#define TFT_RST   D2
+#define TFT_CS    D7
 #define touchPin D0
-// initialize ST7789 TFT library with hardware SPI module
-// SCK (CLK) ---> NodeMCU pin D5 (GPIO14)
-// MOSI(DIN) ---> NodeMCU pin D7 (GPIO13)
 
 Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
-const char* ssid = "NodeMCU";       
-const char* password = "123456789"; 
+const char* ssid = "NodeMCU"; // Access Point SSID
+const char* password = "123456789";  // Access Point Password
 
 ESP8266WebServer server(80);
 
@@ -65,8 +30,7 @@ int hexStringToInt(String hex) {
   return (int)strtol(hex.c_str(), NULL, 16);
 }
 
-class myMQTTBroker: public uMQTTBroker
-{
+class myMQTTBroker: public uMQTTBroker {
 public:
     virtual bool onConnect(IPAddress addr, uint16_t client_count) {
       Serial.println(addr.toString()+" connected");
@@ -117,36 +81,45 @@ void setupMDNS() {
   Serial.println("mDNS responder started");
 }
 
-void setup() {
-  Serial.begin(9600);
-  pinMode(touchPin, INPUT);
+void setupWiFiAP () {
+  WiFi.softAP(ssid, password);
+}
 
-   WiFi.softAP(ssid, password);
-
-  IPAddress myIP = WiFi.softAPIP();
-  Serial.print("Access Point IP:");
-  Serial.println(myIP);
-  setupMDNS();
+void setupMessaging () {
   myBroker.init();
   myBroker.subscribe("#");
+}
 
-  tft.init(240, 240, SPI_MODE2);  // Initialize ST7789 with 240x240 resolution
-  tft.setRotation(1);  // Adjust the display rotation if needed
+void setupWebServer () {
+  server.on("/", rootHandler);
+  server.begin();
+}
 
-  tft.fillScreen(ST77XX_BLACK);  // Fill the screen with black color
+void startup () {
+  tft.init(240, 240, SPI_MODE2);
+  tft.setRotation(1);
+
+  tft.fillScreen(ST77XX_BLACK);
   setBackground();
-  animateNumberChange("230.23");
+  printWeight("230.23");
   printUnit("gr");
   printModeLabel();
   printMode("creamer");
   tft.drawBitmap(20, 30, mug_icon, 48, 48, ST77XX_BLACK);
-  server.on("/", rootHandler);
-
-  server.begin();
 }
 
-unsigned long lastFrame = millis();
-int frameDisplayTimer = 1000;
+void setup() {
+  Serial.begin(9600);
+  pinMode(touchPin, INPUT);
+
+  setupWiFiAP();
+  setupMDNS();
+  setupMessaging();
+  setupWebServer();
+
+  startup();
+}
+
 int counter = 0;
 
 void loop() {
@@ -184,30 +157,24 @@ String renderWebpage() {
   return ptr;
 }
 
-void animateNumberChange(String number) {
-  // Set text properties with a larger text size (2x)
+void printWeight(String number) {
   tft.setTextSize(1);
   tft.setFont(&NotoSansBold24pt7b);
   tft.setTextColor(hexStringToInt("000000"));
 
-  // Erase the leaving number by filling a rectangle with black
   tft.fillRoundRect(17, 145, 215, 36, 10, hexStringToInt(BG_COLOR));
 
-  // Draw the entering number at its position
   tft.setCursor(30, 180);
   tft.print(number);
 }
 
 void printUnit(String number) {
-  // Set text properties with a larger text size (2x)
   tft.setTextSize(1);
   tft.setFont(&NotoSans14pt7b);
   tft.setTextColor(hexStringToInt("000000"));
 
-  // Erase the leaving number by filling a rectangle with black
   tft.fillRoundRect(17, 188, 100, 24, 10, hexStringToInt(BG_COLOR));
 
-  // Draw the entering number at its position
   tft.setCursor(30, 209);
   tft.print(number);
 }
@@ -221,15 +188,12 @@ void printModeLabel() {
 }
 
 void printMode(String number) {
-  // Set text properties with a larger text size (2x)
   tft.setTextSize(1);
   tft.setFont(&NotoSans14pt7b);
   tft.setTextColor(hexStringToInt("000000"));
 
-  // Erase the leaving number by filling a rectangle with black
   tft.fillRect(75, 50, 120, 28, hexStringToInt(BG_COLOR));
 
-  // Draw the entering number at its position
   tft.setCursor(80, 72);
   tft.print(number);
 }

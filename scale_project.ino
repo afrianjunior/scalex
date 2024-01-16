@@ -41,7 +41,7 @@
 #include "NotoSans14pt7b.h"
 #include "NotoSans12pt7b.h"
 #include "NotoSans10pt7b.h"
-#include "ScaleIcon.h"
+#include "icon.h"
 
 // ST7789 TFT module connections
 #define TFT_DC    D1     // TFT DC  pin is connected to NodeMCU pin D1 (GPIO5)

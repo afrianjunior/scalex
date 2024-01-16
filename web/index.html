@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Vite App</title>
+  </head>
+  <body>
+    <script src="webOSTVjs-1.2.4/webOSTV.js" charset="utf-8"></script>
+    <script src="webOSTVjs-1.2.4/webOSTV-dev.js" charset="utf-8"></script>
+    <script type="text/javascript">
+      //sample code for calling LS2 API
+      webOS.service.request("luna://com.palm.systemservice", {
+        method: "clock/getTime",
+        parameters: {},
+        onSuccess: function (args) {
+          console.log("UTC:", args.utc);
+        },
+        onFailure: function (args) {
+          console.log("Failed to getTime");
+        }
+      });
+    </script>
+
+    <div id="root"></div>
+    <script type="module" src="/src/Main.bs.js"></script>
+  </body>
+</html>

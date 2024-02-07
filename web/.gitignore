@@ -9,3 +9,4 @@ dist-ssr
 .merlin
 /lib/
 *.bs.js
+src/lib/bs
